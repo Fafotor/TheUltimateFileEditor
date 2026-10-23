@@ -41,7 +41,7 @@ nav small{display:block;color:var(--dim);margin-top:8px}
 .opts{display:flex;flex-wrap:wrap;gap:6px 18px;margin:12px 0;color:var(--dim)}
 .opts label{cursor:pointer}
 .opts input{accent-color:var(--fg)}
-select,input[type=text],input[type=number],textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--fg);padding:0 4px}
+select,input[type=text],input[type=number],input[type=password],textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--fg);padding:0 4px}
 textarea{padding:4px;resize:vertical}
 .mdprev{border:1px solid var(--line);background:var(--panel);padding:10px 14px;margin-top:6px;max-width:900px;overflow-wrap:anywhere}
 .mdprev h1,.mdprev h2,.mdprev h3{border-bottom:1px dotted var(--line);margin:10px 0 4px}
@@ -83,7 +83,7 @@ footer{margin-top:30px;color:var(--dim);border-top:2px solid var(--line);padding
 <div class="wrap">
 <header>
   <pre id="skull" aria-hidden="true"></pre>
-  <div><h1>THE ULTIMATE FILE EDITOR<i>_</i></h1><div class="sub">МЕТАДАННЫЕ · СЖАТИЕ · ТЕКСТ · ХЕШ // v0.5</div></div>
+  <div><h1>THE ULTIMATE FILE EDITOR<i>_</i></h1><div class="sub">МЕТАДАННЫЕ · СЖАТИЕ · ТЕКСТ · ХЕШ · СТЕГО · ШИФР // v0.6</div></div>
   <div class="sw"><button data-t="green" class="on" title="Зелёная тема">[G]</button><button data-t="red" title="Красная тема">[R]</button></div>
 </header>
 <div class="layout">
@@ -247,7 +247,7 @@ const handlerFor=n=>{const e=n.split('.').pop().toLowerCase();return HANDLERS.fi
 
 /* ---------- tool registry ----------
    Новый инструмент: добавить запись в TOOLS и функцию в VIEWS */
-const TOOLS=[{id:'meta',label:'META.CLEAN',on:1},{id:'comp',label:'FILE.COMPRESS',on:1},{id:'conv',label:'FILE.CONVERT',on:1},{id:'hash',label:'HASH.CHECK',on:1},{id:'redact',label:'TEXT.REDACT',on:1},{id:'note',label:'TEXT.NOTEPAD',on:1},{id:'flat',label:'PDF.FLATTEN'}];
+const TOOLS=[{id:'meta',label:'META.CLEAN',on:1},{id:'comp',label:'FILE.COMPRESS',on:1},{id:'conv',label:'FILE.CONVERT',on:1},{id:'hash',label:'HASH.CHECK',on:1},{id:'redact',label:'TEXT.REDACT',on:1},{id:'note',label:'TEXT.NOTEPAD',on:1},{id:'stego',label:'IMG.STEGO',on:1},{id:'crypt',label:'TEXT.CRYPT',on:1},{id:'flat',label:'PDF.FLATTEN'}];
 /* ---------- TEXT.NOTEPAD: сырое чтение/запись текста, смена кодировки, создание с нуля, .md ---------- */
 const ENC_LIST=[['utf-8','UTF-8'],['windows-1251','Windows-1251 (кириллица)'],['koi8-r','KOI8-R'],['ibm866','CP866 (DOS)'],['windows-1252','Windows-1252 (Latin)'],['iso-8859-1','ISO-8859-1'],['utf-16le','UTF-16LE'],['utf-16be','UTF-16BE']];
 function decodeWith(label,buf){
@@ -301,14 +301,14 @@ function noteView(p){
  const sv=$('#nsave');if(sv)sv.onclick=()=>{try{dlFile(note.name||'untitled.txt',encodeWith(note.encOut,note.text||''));nmsg('сохранено: '+(note.name||'untitled.txt'))}catch(e){nmsg('ошибка кодирования: '+e.message)}};
  const cl=$('#nclr');if(cl)cl.onclick=()=>{note={name:'',buf:null,text:'',encIn:note.encIn,encOut:note.encOut,active:0,mdPreview:0};noteView(p)}}
 
-const VIEWS={meta:workView,comp:workView,conv:workView,redact:workView,note:noteView,hash:hashView};
+const VIEWS={meta:workView,comp:workView,conv:workView,redact:workView,note:noteView,hash:hashView,stego:stegoView,crypt:cryptView};
 let cur='meta';
 function nav(){$('#nav').innerHTML=TOOLS.map(t=>`<button data-id="${t.id}" class="${t.id==cur?'act':''}">${t.on?'&gt;':'#'} ${t.label}</button>`).join('')+'<small>[#] — модуль в разработке</small>';
  $('#nav').querySelectorAll('button').forEach(b=>b.onclick=()=>{cur=b.dataset.id;files=[];hf=[];nav();show()})}
 function show(){const p=$('#panel');VIEWS[cur]?VIEWS[cur](p):p.innerHTML=`<div class="soon">&gt; МОДУЛЬ «${esc(TOOLS.find(t=>t.id==cur).label)}» НЕ УСТАНОВЛЕН<br>скоро появится</div>`}
 
 /* ---------- WORK: META.CLEAN / FILE.COMPRESS / FILE.CONVERT ---------- */
-let files=[],opts={core:1,app:1,custom:1,thumb:1},uid=0,cfg={q:75,max:0,to:'webp',raw:'',rterms:'',rmask:'█',rregex:0};
+let files=[],opts={core:1,app:1,custom:1,thumb:1},uid=0,cfg={q:75,max:0,to:'webp',raw:'',rterms:'',rmask:'█',rregex:0,preset:'custom',ton:0,tv:1,tu:1048576};
 const IMG={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp'};
 const extOf=n=>(n.match(/\.([^.]+)$/)||['',''])[1].toLowerCase();
 const base=n=>n.replace(/\.[^.]+$/,'');
@@ -316,28 +316,31 @@ const lib=src=>new Promise((ok,no)=>{const s=document.createElement('script');s.
 /* ---- скачивание: обычная ссылка download, работает в любом браузере локально ---- */
 function dlFile(name,data,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:type||'application/octet-stream'}));a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},5000)}
 /* ---- перекодирование изображения через canvas (метаданные при этом исчезают) ---- */
-async function enc(u,type,q,max,from){const bm=await createImageBitmap(new Blob([u],{type:from}));
- const s=max?Math.min(1,max/Math.max(bm.width,bm.height)):1,w=Math.round(bm.width*s),h=Math.round(bm.height*s);
+async function enc(u,type,q,max,from,k=1){const bm=await createImageBitmap(new Blob([u],{type:from}));
+ const s=(max?Math.min(1,max/Math.max(bm.width,bm.height)):1)*k,w=Math.max(1,Math.round(bm.width*s)),h=Math.max(1,Math.round(bm.height*s));
  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
  if(type=='image/jpeg'){x.fillStyle='#fff';x.fillRect(0,0,w,h)}x.drawImage(bm,0,0,w,h);
  const b=await new Promise(r=>c.toBlob(r,type,q/100));if(!b||b.type!=type)throw Error('браузер не умеет кодировать '+type);
  return new Uint8Array(await b.arrayBuffer())}
-async function fitTarget(run){const t=cfg.target*1024;let lo=10,hi=100,best=null;
- for(let i=0;i<6&&lo<=hi;i++){const q=Math.round((lo+hi)/2),out=await run(q);
-  if(!best||Math.abs(out.length-t)<Math.abs(best.length-t))best=out;
-  if(out.length>t)hi=q-1;else lo=q+1}
- return best}
-async function compress(f){const e=extOf(f.name),m=IMG[e];let out;
+const MB=1048576,KB=1024,TB=()=>cfg.ton&&cfg.tv>0?Math.round(cfg.tv*cfg.tu):0;
+const tnote=o=>'цель '+fmt(TB())+' → получено '+fmt(o.length)+(o.length>TB()?' (не достигнуто)':'');
+/* подбор: сначала качество 1..100 (бинарный поиск), если даже 1% не влезает — уменьшаем размеры в пикселях */
+async function fitTarget(run){const t=TB();let last;
+ for(const k of [1,.8,.62,.48,.36,.26,.18,.12]){last=await run(1,k);if(last.length>t)continue;
+  let lo=2,hi=100,ok=last;for(let i=0;i<7&&lo<=hi;i++){const q=(lo+hi)>>1,o=await run(q,k);if(o.length<=t){ok=o;lo=q+1}else hi=q-1}
+  return ok}
+ return last}
+async function compress(f){const e=extOf(f.name),m=IMG[e],t=TB();let out;
  if(['jpg','jpeg','webp'].includes(e)){
-  out=cfg.target?await fitTarget(q=>enc(f.buf,m,q,cfg.max,m)):await enc(f.buf,m,cfg.q,cfg.max,m);
-  if(cfg.target)f.note='цель '+cfg.target+' КБ → получено '+Math.round(out.length/1024)+' КБ'}
- else if(e=='png'){if(cfg.target)f.note='для PNG точный размер недоступен — уменьшите «Макс. сторону»';out=await enc(f.buf,m,cfg.q,cfg.max,m)}
- else if(ooxml.ext.includes(e)){const run=async q=>{const z=await JSZip.loadAsync(f.buf);
-   for(const n of Object.keys(z.files)){const t=IMG[extOf(n)];if(/\/media\//.test(n)&&['image/jpeg','image/png','image/webp'].includes(t)){const u=await z.file(n).async('uint8array');try{const r=await enc(u,t,q,cfg.max,t);if(r.length<u.length)z.file(n,r)}catch(_){}}}
+  out=t?await fitTarget((q,k)=>enc(f.buf,m,q,cfg.max,m,k)):await enc(f.buf,m,cfg.q,cfg.max,m);
+  if(t)f.note=tnote(out)}
+ else if(e=='png'){let k=1;out=await enc(f.buf,m,cfg.q,cfg.max,m);
+  if(t){for(let i=0;i<20&&out.length>t;i++){k*=.85;out=await enc(f.buf,m,cfg.q,cfg.max,m,k)}f.note=tnote(out)}}
+ else if(ooxml.ext.includes(e)){const run=async(q,k=1)=>{const z=await JSZip.loadAsync(f.buf);
+   for(const n of Object.keys(z.files)){const ty=IMG[extOf(n)];if(/\/media\//.test(n)&&['image/jpeg','image/png','image/webp'].includes(ty)){const u=await z.file(n).async('uint8array');try{const r=await enc(u,ty,q,cfg.max,ty,k);if(r.length<u.length)z.file(n,r)}catch(_){}}}
    return z.generateAsync({type:'uint8array',compression:'DEFLATE',compressionOptions:{level:9}})};
-  out=cfg.target?await fitTarget(run):await run(cfg.q);
-  if(cfg.target)f.note='цель '+cfg.target+' КБ → получено '+Math.round(out.length/1024)+' КБ'}
- else if(e=='pdf'){if(cfg.target)f.note='PDF сжимается без потерь — размер не настраивается';await lib('https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js');out=await(await PDFLib.PDFDocument.load(f.buf,{updateMetadata:false})).save({useObjectStreams:true})}
+  out=t?await fitTarget(run):await run(cfg.q);if(t)f.note=tnote(out)}
+ else if(e=='pdf'){if(t)f.note='PDF сжимается без потерь — размер не настраивается';await lib('https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js');out=await(await PDFLib.PDFDocument.load(f.buf,{updateMetadata:false})).save({useObjectStreams:true})}
  else throw Error('сжатие: jpg png webp docx xlsx pptx pdf');
  if(out.length>=f.buf.length){out=f.buf;f.note=(f.note?f.note+' · ':'')+'уже оптимален'}return out}
 async function convert(f){const e=extOf(f.name);
@@ -365,12 +368,15 @@ async function redact(f){const e=extOf(f.name),terms=(cfg.rterms||'').split('\n'
  throw Error('редактирование текста: txt/md/csv/json/xml/html docx xlsx pptx pdf')}
 
 const MODES={meta:{tag:'.clean',btn:'ОЧИСТИТЬ',run:f=>f.h.clean(f.buf,opts)},comp:{tag:'.min',btn:'СЖАТЬ',run:compress},conv:{tag:'',btn:'КОНВЕРТИРОВАТЬ',run:convert},redact:{tag:'.redacted',btn:'ЗАРЕДАКТИРОВАТЬ',run:redact}};
-const WARN={meta:'Очищайте копии. Старые .doc/.xls/.ppt поддержаны частично: только SummaryInformation/DocumentSummaryInformation, без миниатюр и пользовательских свойств.',comp:'Изображения сжимаются с потерями (метаданные при этом удаляются). PDF — без потерь. Если файл не стал меньше, остаётся оригинал.',conv:'Конвертация — между JPG, PNG и WEBP. «Только сменить расширение» не меняет содержимое файла.',redact:'Каждая строка в поле поиска — отдельный образец для замены (регистр не важен). Для PDF и обычного текста замена той же длины, что и исходный текст; для docx/xlsx/pptx длина не ограничена.'};
+const WARN={meta:'Очищайте копии. Старые .doc/.xls/.ppt поддержаны частично: только SummaryInformation/DocumentSummaryInformation, без миниатюр и пользовательских свойств.',comp:'Выберите пресет или настройте вручную. Качество — от 1%. «Сжать до размера» (по умолчанию выключено) подбирает качество, а если не хватает — уменьшает разрешение, чтобы уложиться в КБ/МБ. Изображения сжимаются с потерями, PDF — без потерь. Если файл не стал меньше, остаётся оригинал.',conv:'Конвертация — между JPG, PNG и WEBP. «Только сменить расширение» не меняет содержимое файла.',redact:'Каждая строка в поле поиска — отдельный образец для замены (регистр не важен). Для PDF и обычного текста замена той же длины, что и исходный текст; для docx/xlsx/pptx длина не ограничена.'};
 const sel=(id,a,v)=>`<select id="${id}">${a.map(([k,l])=>`<option value="${k}" ${k==v?'selected':''}>${l}</option>`).join('')}</select>`;
-const QM=()=>`<label>Качество <input type="range" id="q" min="10" max="100" value="${cfg.q}" ${cfg.target?'disabled':''}> <b id="qv">${cfg.q}</b>%</label><label>Макс. сторона ${sel('mx',[[0,'оригинал'],[3840,'3840 px'],[2560,'2560 px'],[1920,'1920 px'],[1280,'1280 px'],[800,'800 px']],cfg.max)}</label>`;
-const SZ=()=>cur=='comp'?`<label>Желаемый размер <input type="number" id="tg" min="0" step="1" value="${cfg.target||''}" placeholder="авто" style="width:70px"> КБ</label>`:'';
+const QM=()=>`<label>Качество <input type="range" id="q" min="1" max="100" value="${cfg.q}" ${cfg.target?'disabled':''}> <b id="qv">${cfg.q}</b>%</label><label>Макс. сторона ${sel('mx',[[0,'оригинал'],[3840,'3840 px'],[2560,'2560 px'],[1920,'1920 px'],[1280,'1280 px'],[1024,'1024 px'],[800,'800 px'],[480,'480 px']],cfg.max)}</label>`;
+const SZ=()=>cur=='comp'?`<label><input type="checkbox" id="ton" ${cfg.ton?'checked':''}> Сжать до размера</label><label><input type="number" id="tg" min="0.01" step="any" value="${cfg.tv}" style="width:80px"> ${sel('tu',[[1024,'КБ'],[1048576,'МБ']],cfg.tu)}</label>`:'';
+const PQ=(q,max)=>({q,max,ton:0}),PTG=(tv,tu)=>({ton:1,tv,tu,max:0,q:75});
+const PRESETS=[['custom','— свои параметры —'],['max','Максимум качества · 92% · оригинал',PQ(92,0)],['web','Веб · 82% · 2560 px',PQ(82,2560)],['bal','Баланс · 75% · 1920 px',PQ(75,1920)],['msg','Мессенджер · 65% · 1280 px',PQ(65,1280)],['small','Компактный · 45% · 1024 px',PQ(45,1024)],['tiny','Минимум · 20% · 800 px',PQ(20,800)],['t2','До 2 МБ',PTG(2,MB)],['t1','До 1 МБ',PTG(1,MB)],['t500','До 500 КБ',PTG(500,KB)],['t200','До 200 КБ',PTG(200,KB)],['t50','До 50 КБ',PTG(50,KB)]];
+const PR=()=>cur=='comp'?`<label>Пресет ${sel('pr',PRESETS.map(p=>[p[0],p[1]]),cfg.preset)}</label>`:'';
 const OPT={meta:()=>[['core','Автор, заголовок, даты (core)'],['app','Компания, менеджер, шаблон (app)'],['custom','Свои свойства (custom)'],['thumb','Миниатюра']].map(([k,l])=>`<label><input type="checkbox" data-o="${k}" ${opts[k]?'checked':''}> ${l}</label>`).join(''),
- comp:()=>QM()+SZ(),conv:()=>`<label>Во что ${sel('to',[['webp','WEBP'],['jpg','JPG'],['png','PNG'],['raw','только сменить расширение']],cfg.to)}</label><label>Новое расширение <input type="text" id="raw" size="6" value="${esc(cfg.raw)}" placeholder="zip"></label>${QM()}`,
+ comp:()=>PR()+QM()+SZ(),conv:()=>`<label>Во что ${sel('to',[['webp','WEBP'],['jpg','JPG'],['png','PNG'],['raw','только сменить расширение']],cfg.to)}</label><label>Новое расширение <input type="text" id="raw" size="6" value="${esc(cfg.raw)}" placeholder="zip"></label>${QM()}`,
  redact:()=>`<label style="flex:1;min-width:260px">Что искать, по одной строке<br><textarea id="rterms" rows="3" style="width:100%;max-width:420px">${esc(cfg.rterms||'')}</textarea></label><label><input type="checkbox" id="rregex" ${cfg.rregex?'checked':''}> регулярные выражения</label><label>Символ замены <input type="text" id="rmask" size="4" value="${esc(cfg.rmask)}"></label>`};
 function workView(p){
  p.innerHTML=`<div class="warn"><b>ВАЖНО</b><span>${WARN[cur]}</span></div>
@@ -384,9 +390,12 @@ function workView(p){
  d.ondragover=e=>{e.preventDefault();d.classList.add('over')};d.ondragleave=()=>d.classList.remove('over');
  d.ondrop=e=>{e.preventDefault();d.classList.remove('over');add(e.dataTransfer.files)};
  p.querySelectorAll('[data-o]').forEach(c=>c.onchange=()=>opts[c.dataset.o]=c.checked?1:0);
- on('#q','oninput',e=>{cfg.q=+e.target.value;$('#qv').textContent=cfg.q});on('#mx','onchange',e=>cfg.max=+e.target.value);
+ const cu=()=>{cfg.preset='custom';const e=$('#pr');if(e)e.value='custom'},sy=()=>{['tg','tu'].forEach(i=>{const e=$('#'+i);if(e)e.disabled=!cfg.ton});const q=$('#q');if(q)q.disabled=!!cfg.ton};
+ on('#q','oninput',e=>{cfg.q=+e.target.value;$('#qv').textContent=cfg.q;cu()});on('#mx','onchange',e=>{cfg.max=+e.target.value;cu()});
+ on('#pr','onchange',e=>{const P=PRESETS.find(x=>x[0]==e.target.value);cfg.preset=P[0];if(P[2])Object.assign(cfg,P[2]);workView(p)});
+ on('#ton','onchange',e=>{cfg.ton=e.target.checked?1:0;cu();sy()});on('#tu','onchange',e=>{cfg.tu=+e.target.value;cu()});
  on('#to','onchange',e=>cfg.to=e.target.value);on('#raw','oninput',e=>cfg.raw=e.target.value);
- on('#tg','oninput',e=>{cfg.target=+e.target.value||0;const q=$('#q');if(q)q.disabled=!!cfg.target});
+ on('#tg','oninput',e=>{cfg.tv=+e.target.value||0;cu()});sy();
  on('#rterms','oninput',e=>cfg.rterms=e.target.value);on('#rregex','onchange',e=>cfg.rregex=e.target.checked?1:0);on('#rmask','oninput',e=>cfg.rmask=e.target.value||'█');
  $('#all').onclick=async()=>{for(const f of files)if(!f.out)await cleanOne(f);draw()};
  $('#zip').onclick=saveZip;$('#clr').onclick=()=>{files.forEach(freeCmp);files=[];draw()};draw()}
@@ -442,6 +451,95 @@ function hdraw(){const l=$('#list');if(!l)return;const x=hc.exp.replace(/\s/g,''
  l.innerHTML=hf.map(f=>`<div class="file"><div class="fh"><span class="n">${esc(f.name)}</span><span class="tag">${fmt(f.size)}</span>${f.err?`<span class="tag">ERR: ${esc(f.err)}</span>`:`<span class="tag">${f.alg}</span>`+(x?(f.hash==x?'<span class="tag ok">✓ СОВПАДАЕТ</span>':'<span class="tag">✗ НЕ СОВПАДАЕТ</span>'):'')}${f.hash?`<button data-h="${f.id}">КОПИРОВАТЬ</button>`:''}<button data-x="${f.id}">✕</button></div>${f.hash?`<div class="fb hs">${f.hash}</div>`:''}</div>`).join('');
  l.querySelectorAll('[data-h]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(hf.find(f=>f.id==b.dataset.h).hash);msg('хеш скопирован')}catch(e){msg('не удалось скопировать')}});
  l.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{hf=hf.filter(f=>f.id!=b.dataset.x);hdraw()})}
+
+/* ---------- CRYPTO CORE: PBKDF2-SHA256 (600k) → AES-256-GCM ---------- */
+const KDF_IT=600000,TE=new TextEncoder(),rnd=n=>crypto.getRandomValues(new Uint8Array(n)),cat=(...a)=>{const o=new Uint8Array(a.reduce((s,x)=>s+x.length,0));let p=0;a.forEach(x=>{o.set(x,p);p+=x.length});return o};
+const say=t=>{const m=$('#xmsg');if(m)m.textContent=t?'> '+t:''};
+async function kdf(pw,salt){if(!window.crypto||!crypto.subtle)throw Error('WebCrypto недоступен (нужен https или localhost)');if(!pw)throw Error('введите пароль');
+ const bs=await crypto.subtle.importKey('raw',TE.encode(pw.normalize('NFKC')),'PBKDF2',false,['deriveBits']);
+ const b=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:KDF_IT,hash:'SHA-256'},bs,320));
+ return{key:await crypto.subtle.importKey('raw',b.slice(0,32),'AES-GCM',false,['encrypt','decrypt']),p:b.slice(32)}}
+const sealW=async(key,salt,data)=>{const iv=rnd(12);return cat(iv,new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:salt},key,data)))};
+const BADPW='не удалось расшифровать: неверный пароль, формат или данные повреждены';
+const openW=async(key,salt,body)=>{try{return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:body.subarray(0,12),additionalData:salt},key,body.subarray(12)))}catch(e){throw Error(BADPW)}};
+const sealText=async(pw,u)=>{const s=rnd(16),{key}=await kdf(pw,s);return cat(s,await sealW(key,s,u))};
+const openText=async(pw,u)=>{if(u.length<45)throw Error(BADPW);const s=u.subarray(0,16),{key}=await kdf(pw,s);return openW(key,s,u.subarray(16))};
+
+/* ---------- TEXT.CRYPT: шифрование текста в разные форматы ---------- */
+const B32='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',ZW=['\u200B','\u200C','\u200D','\u2060'];
+const B64=u=>btoa(b2s(u)),bad=()=>{throw Error('неверный формат')};
+const chk=(s,re)=>{s=s.replace(/\s/g,'');if(!s||!re.test(s))bad();return s};
+const FORMATS={
+ b64:['Base64',B64,s=>s2b(atob(chk(s,/^[A-Za-z0-9+/]+={0,2}$/)))],
+ b64u:['Base64URL',u=>B64(u).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),s=>{s=chk(s,/^[A-Za-z0-9_-]+$/).replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return s2b(atob(s))}],
+ hex:['Hex',u=>[...u].map(b=>b.toString(16).padStart(2,'0')).join(''),s=>{s=chk(s,/^([0-9a-f]{2})+$/i);return Uint8Array.from(s.match(/../g),h=>parseInt(h,16))}],
+ b32:['Base32',u=>{let b='',o='';u.forEach(x=>b+=x.toString(2).padStart(8,'0'));b=b.padEnd(Math.ceil(b.length/5)*5,'0');for(let i=0;i<b.length;i+=5)o+=B32[parseInt(b.substr(i,5),2)];return o+'='.repeat((8-o.length%8)%8)},
+  s=>{s=chk(s.toUpperCase(),/^[A-Z2-7]+=*$/).replace(/=+$/,'');let b='';for(const c of s)b+=B32.indexOf(c).toString(2).padStart(5,'0');const o=[];for(let i=0;i+8<=b.length;i+=8)o.push(parseInt(b.substr(i,8),2));return Uint8Array.from(o)}],
+ bin:['Binary (0/1)',u=>[...u].map(b=>b.toString(2).padStart(8,'0')).join(' '),s=>{s=chk(s,/^[01]+$/);if(s.length%8)bad();return Uint8Array.from(s.match(/.{8}/g),x=>parseInt(x,2))}],
+ emo:['Эмодзи 🐾',u=>[...u].map(b=>String.fromCodePoint(0x1F400+b)).join(''),s=>{const a=Array.from(s.replace(/\s/g,''));if(!a.length)bad();return Uint8Array.from(a,c=>{const v=c.codePointAt(0)-0x1F400;if(v<0||v>255)bad();return v})}],
+ zw:['Невидимый (zero-width)',u=>[...u].map(b=>ZW[b>>6]+ZW[b>>4&3]+ZW[b>>2&3]+ZW[b&3]).join(''),s=>{const a=[...s].filter(c=>ZW.includes(c));if(!a.length||a.length%4)bad();const o=[];for(let i=0;i<a.length;i+=4)o.push(ZW.indexOf(a[i])<<6|ZW.indexOf(a[i+1])<<4|ZW.indexOf(a[i+2])<<2|ZW.indexOf(a[i+3]));return Uint8Array.from(o)}],
+ arm:['Armor (-----BEGIN-----)',u=>'-----BEGIN UFE MESSAGE-----\n'+B64(u).match(/.{1,64}/g).join('\n')+'\n-----END UFE MESSAGE-----',s=>{const m=s.match(/-----BEGIN UFE MESSAGE-----([\s\S]*?)-----END UFE MESSAGE-----/);if(!m)bad();return FORMATS.b64[2](m[1])}]};
+const AUTO=['arm','zw','emo','bin','hex','b32','b64u','b64'];
+let cr={mode:'enc',fmt:'b64',aes:1,pw:'',inp:'',out:''};
+async function cryptRun(){const t=cr.inp;if(!t)throw Error('введите текст');
+ if(cr.aes&&!cr.pw)throw Error('введите пароль');
+ if(cr.mode=='enc'){let u=TE.encode(t);if(cr.aes)u=await sealText(cr.pw,u);return FORMATS[cr.fmt][1](u)}
+ let seen=0;for(const k of cr.fmt=='auto'?AUTO:[cr.fmt]){let u;try{u=FORMATS[k][2](t)}catch(e){continue}seen++;
+  try{if(cr.aes)u=await openText(cr.pw,u);return new TextDecoder('utf-8',{fatal:true}).decode(u)}catch(e){if(/WebCrypto/.test(e.message))throw e}}
+ throw Error(seen?BADPW:'формат не распознан — выберите его вручную')}
+function cryptView(p){const dec=cr.mode=='dec',fl=Object.entries(FORMATS).map(([k,v])=>[k,v[0]]);
+ if(dec)fl.unshift(['auto','Авто-определение']);else if(cr.fmt=='auto')cr.fmt='b64';
+ p.innerHTML=`<div class="warn"><b>ВАЖНО</b><span>Текст шифруется AES-256-GCM (ключ из пароля: PBKDF2-SHA256, 600 000 итераций, случайные соль и nonce) и кодируется в выбранный формат. Пароль не восстановить. Без галочки шифрования — просто кодирование (не защита!); формат там лучше выбирать вручную.</span></div>
+ <div class="bar"><button data-m="enc" class="${dec?'':'on'}">ШИФРОВАТЬ</button><button data-m="dec" class="${dec?'on':''}">ДЕШИФРОВАТЬ</button></div>
+ <div class="opts"><label><input type="checkbox" id="caes" ${cr.aes?'checked':''}> AES-256-GCM</label><label>Пароль <input type="password" id="cpw" value="${esc(cr.pw)}" size="22" autocomplete="off"></label><label>Формат ${sel('cf',fl,cr.fmt)}</label></div>
+ <div class="sec">[ ${dec?'ШИФРОТЕКСТ':'ТЕКСТ'} ]</div><textarea id="cin" rows="7" style="width:100%;max-width:900px;display:block" spellcheck="false">${esc(cr.inp)}</textarea>
+ <div class="sec">[ ${dec?'ТЕКСТ':'РЕЗУЛЬТАТ'} ]</div><textarea id="cout" rows="7" readonly style="width:100%;max-width:900px;display:block" spellcheck="false">${esc(cr.out)}</textarea>
+ <div class="bar"><button id="cgo">${dec?'ДЕШИФРОВАТЬ':'ШИФРОВАТЬ'}</button><button id="ccp">КОПИРОВАТЬ</button><button id="cdl">СКАЧАТЬ .TXT</button><button id="csw">РЕЗУЛЬТАТ → ВХОД</button><button id="cclr">ОЧИСТИТЬ</button></div><div id="xmsg"></div>`;
+ p.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{cr.mode=b.dataset.m;cr.out='';if(cr.mode=='dec'&&cr.fmt=='b64')cr.fmt='auto';else if(cr.mode=='enc'&&cr.fmt=='auto')cr.fmt='b64';cryptView(p)});
+ $('#caes').onchange=e=>cr.aes=e.target.checked?1:0;$('#cpw').oninput=e=>cr.pw=e.target.value;$('#cf').onchange=e=>cr.fmt=e.target.value;$('#cin').oninput=e=>cr.inp=e.target.value;
+ $('#cgo').onclick=async()=>{const b=$('#cgo');b.disabled=true;say('обработка…');try{cr.out=await cryptRun();$('#cout').value=cr.out;say('готово · '+cr.out.length+' симв.')}catch(e){say('ошибка: '+e.message)}b.disabled=false};
+ $('#ccp').onclick=async()=>{try{await navigator.clipboard.writeText(cr.out);say('скопировано')}catch(e){say('не удалось скопировать')}};
+ $('#cdl').onclick=()=>{if(cr.out){dlFile(dec?'decrypted.txt':'encrypted.txt',TE.encode(cr.out),'text/plain');say('сохранено')}};
+ $('#csw').onclick=()=>{cr.inp=cr.out;cr.out='';cr.mode=cr.mode=='enc'?'dec':'enc';cr.fmt=cr.mode=='dec'?'auto':'b64';cryptView(p)};
+ $('#cclr').onclick=()=>{cr.inp=cr.out='';cryptView(p)}}
+
+/* ---------- IMG.STEGO: LSB-стеганография + AES-256-GCM ----------
+   Заголовок (соль 16 Б + длина 4 Б) — в первых 160 младших битах; зашифрованное тело — в позициях, которые задаёт ключ (шаг, взаимно простой с ёмкостью). */
+const HD=160,gcd=(a,b)=>{while(b)[a,b]=[b,a%b];return a},sidx=s=>(s/3|0)*4+s%3;
+const layout=(p,N)=>{const M=N-HD,u=i=>((p[i]<<24|p[i+1]<<16|p[i+2]<<8|p[i+3])>>>0),a=u(0)%M;let st=(u(4)%M)|1;while(gcd(st,M)!=1)st+=2;return i=>HD+(a+i*st)%M};
+const put=(px,u,sl)=>{for(let i=0,n=u.length*8;i<n;i++){const k=sidx(sl(i));px[k]=px[k]&254|(u[i>>3]>>(7-(i&7))&1)}};
+const get=(px,n,sl)=>{const o=new Uint8Array(n);for(let i=0;i<n*8;i++)o[i>>3]|=(px[sidx(sl(i))]&1)<<(7-(i&7));return o};
+let sg={mode:'hide',bm:null,name:'',w:0,h:0,kind:'text',text:'',file:null,pw:'',res:''};
+const sgCap=()=>sg.w?Math.max(0,Math.floor((sg.w*sg.h*3-HD)/8)-30):0;
+function sgPix(){const c=document.createElement('canvas');c.width=sg.w;c.height=sg.h;const x=c.getContext('2d',{willReadFrequently:true});x.fillStyle='#fff';x.fillRect(0,0,sg.w,sg.h);x.drawImage(sg.bm,0,0);return{c,x,id:x.getImageData(0,0,sg.w,sg.h)}}
+async function sgHide(){if(!sg.bm)throw Error('сначала выберите изображение');
+ let name='',data;if(sg.kind=='text'){if(!sg.text)throw Error('введите текст');data=TE.encode(sg.text)}else{if(!sg.file)throw Error('выберите файл');name=sg.file.name;data=new Uint8Array(await sg.file.arrayBuffer())}
+ const nb=TE.encode(name).slice(0,255),pl=cat(Uint8Array.of(sg.kind=='text'?0:1,nb.length),nb,data),N=sg.w*sg.h*3;
+ if(HD+(pl.length+28)*8>N)throw Error('не помещается: данные '+fmt(pl.length)+', ёмкость ≈ '+fmt(sgCap())+' — нужна картинка побольше');
+ const salt=rnd(16),{key,p}=await kdf(sg.pw,salt),body=await sealW(key,salt,pl),{c,x,id}=sgPix(),L=body.length;
+ put(id.data,cat(salt,Uint8Array.of(L>>>24,L>>>16,L>>>8,L)),i=>i);put(id.data,body,layout(p,N));x.putImageData(id,0,0);
+ const b=await new Promise(r=>c.toBlob(r,'image/png'));if(!b)throw Error('не удалось сохранить PNG');
+ dlFile(base(sg.name)+'.stego.png',b,'image/png');return'готово: '+base(sg.name)+'.stego.png · спрятано '+fmt(pl.length)}
+async function sgExtract(){if(!sg.bm)throw Error('сначала выберите изображение');const N=sg.w*sg.h*3;if(N<HD+240)throw Error('изображение слишком маленькое');
+ const px=sgPix().id.data,h=get(px,20,i=>i),salt=h.slice(0,16),L=(h[16]<<24|h[17]<<16|h[18]<<8|h[19])>>>0;
+ if(L<30||HD+L*8>N)throw Error('скрытых данных не найдено (нужен PNG, сохранённый этим модулем)');
+ const{key,p}=await kdf(sg.pw,salt),pl=await openW(key,salt,get(px,L,layout(p,N))),nl=pl[1],name=new TextDecoder().decode(pl.subarray(2,2+nl)),data=pl.subarray(2+nl);
+ if(pl[0]==0){sg.res=new TextDecoder().decode(data);return'найден текст · '+fmt(data.length)}
+ dlFile(name||'extracted.bin',data);sg.res='';return'найден файл «'+name+'» · '+fmt(data.length)+' — сохранён'}
+function stegoView(p){const hide=sg.mode=='hide';
+ p.innerHTML=`<div class="warn"><b>ВАЖНО</b><span>Данные шифруются AES-256-GCM (PBKDF2-SHA256, 600 000 итераций) и прячутся в младших битах пикселей; их расположение зависит от пароля. Результат — только PNG: JPG, мессенджеры и соцсети пережимают картинку и стирают данные. Прозрачность заменяется белым.</span></div>
+ <div class="bar"><button data-m="hide" class="${hide?'on':''}">СПРЯТАТЬ</button><button data-m="ext" class="${hide?'':'on'}">ИЗВЛЕЧЬ</button></div>
+ <div id="drop"><big>[ ${sg.bm?esc(sg.name):'ВЫБЕРИТЕ КАРТИНКУ'} ]</big>${sg.bm?sg.w+'×'+sg.h+(hide?' · ёмкость ≈ '+fmt(sgCap()):''):'PNG · JPG · WEBP · BMP — перетащите или нажмите'}</div><input id="inp" type="file" accept="image/*" hidden>
+ <div class="opts">${hide?`<label><input type="radio" name="sk" value="text" ${sg.kind=='text'?'checked':''}> текст</label><label><input type="radio" name="sk" value="file" ${sg.kind=='file'?'checked':''}> файл</label>`:''}<label>Пароль <input type="password" id="spw" value="${esc(sg.pw)}" size="22" autocomplete="off"></label></div>
+ ${hide?(sg.kind=='text'?`<textarea id="stx" rows="8" style="width:100%;max-width:900px;display:block" spellcheck="false" placeholder="секретный текст">${esc(sg.text)}</textarea>`:`<div class="opts"><input type="file" id="sfl"><span>${sg.file?esc(sg.file.name)+' · '+fmt(sg.file.size):''}</span></div>`):`<textarea id="sres" rows="8" readonly style="width:100%;max-width:900px;display:block" placeholder="здесь появится найденный текст">${esc(sg.res)}</textarea>`}
+ <div class="bar"><button id="sgo">${hide?'СПРЯТАТЬ И СКАЧАТЬ PNG':'ИЗВЛЕЧЬ'}</button></div><div id="xmsg"></div>`;
+ const d=$('#drop'),inp=$('#inp'),ld=async f=>{if(!f)return;try{sg.bm=await createImageBitmap(f,{colorSpaceConversion:'none'});sg.w=sg.bm.width;sg.h=sg.bm.height;sg.name=f.name;sg.res='';stegoView(p)}catch(e){say('не удалось открыть изображение')}};
+ d.onclick=()=>inp.click();inp.onchange=()=>{ld(inp.files[0]);inp.value=''};
+ d.ondragover=e=>{e.preventDefault();d.classList.add('over')};d.ondragleave=()=>d.classList.remove('over');d.ondrop=e=>{e.preventDefault();d.classList.remove('over');ld(e.dataTransfer.files[0])};
+ p.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{sg.mode=b.dataset.m;stegoView(p)});
+ p.querySelectorAll('[name=sk]').forEach(r=>r.onchange=()=>{sg.kind=r.value;stegoView(p)});
+ $('#spw').oninput=e=>sg.pw=e.target.value;const tx=$('#stx');if(tx)tx.oninput=e=>sg.text=e.target.value;const fl=$('#sfl');if(fl)fl.onchange=e=>{sg.file=e.target.files[0]||null;stegoView(p)};
+ $('#sgo').onclick=async()=>{const b=$('#sgo');b.disabled=true;say('обработка…');try{say(await(hide?sgHide():sgExtract()));const r=$('#sres');if(r)r.value=sg.res}catch(e){say('ошибка: '+e.message)}b.disabled=false}}
 
 nav();show();
 </script>
