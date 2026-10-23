@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="green">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Ultimate File Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#021008;--fg:#3dff9a;--dim:#1fa062;--line:#0f4a2c;--panel:#04180e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root[data-theme="red"]{--bg:#140808;--fg:#ff6b4f;--dim:#b04632;--line:#4d1d16;--panel:#1c0b0a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:20px/1.25 'VT323',ui-monospace,Menlo,Consolas,monospace;min-height:100vh;text-shadow:0 0 6px color-mix(in srgb,var(--fg) 55%,transparent)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px)}
+.edge{position:fixed;top:0;bottom:0;width:min(5vw,36px);pointer-events:none;background:repeating-linear-gradient(0deg,var(--fg) 0 2px,transparent 2px 9px);opacity:.55;-webkit-mask:linear-gradient(90deg,#000,transparent);mask:linear-gradient(90deg,#000,transparent)}
+.edge.r{right:0;transform:scaleX(-1)}
+.edge.l{left:0}
+.wrap{max-width:1000px;margin:0 auto;padding:18px min(7vw,56px) 40px}
+header{display:flex;gap:20px;align-items:center;border-bottom:2px solid var(--line);padding-bottom:14px;margin-bottom:16px}
+#skull{margin:0;font:7px/7px monospace;letter-spacing:1px;color:var(--fg);animation:fl 3s infinite;flex:none}
+@keyframes fl{0%,92%,100%{opacity:1}94%{opacity:.6}96%{opacity:.9}}
+h1{margin:0;font-size:32px;letter-spacing:2px;line-height:1}
+h1 i{font-style:normal;animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+.sub{color:var(--dim);margin-top:4px}
+.sw{margin-left:auto;display:flex;gap:6px}
+button,.btn{font:inherit;color:var(--fg);background:transparent;border:1px solid var(--fg);padding:2px 12px;cursor:pointer;text-shadow:inherit}
+button:hover:not(:disabled){background:var(--fg);color:var(--bg);text-shadow:none}
+button:disabled{opacity:.35;cursor:default}
+button.on{background:var(--fg);color:var(--bg);text-shadow:none}
+.layout{display:grid;grid-template-columns:190px 1fr;gap:18px}
+nav{display:flex;flex-direction:column;gap:6px}
+nav button{text-align:left;border-color:var(--line);color:var(--dim)}
+nav button.act{border-color:var(--fg);color:var(--fg)}
+nav small{display:block;color:var(--dim);margin-top:8px}
+.warn{border:1px solid var(--fg);padding:6px 10px;margin-bottom:14px;display:flex;gap:10px;align-items:center}
+.warn b{background:var(--fg);color:var(--bg);padding:0 8px;text-shadow:none;letter-spacing:2px}
+#drop{border:2px dashed var(--dim);padding:34px 14px;text-align:center;cursor:pointer;background:var(--panel)}
+#drop.over,#drop:hover{border-color:var(--fg);border-style:solid}
+#drop big{display:block;font-size:30px}
+.opts{display:flex;flex-wrap:wrap;gap:6px 18px;margin:12px 0;color:var(--dim)}
+.opts label{cursor:pointer}
+.opts input{accent-color:var(--fg)}
+select,input[type=text],input[type=number],textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--fg);padding:0 4px}
+textarea{padding:4px;resize:vertical}
+.mdprev{border:1px solid var(--line);background:var(--panel);padding:10px 14px;margin-top:6px;max-width:900px;overflow-wrap:anywhere}
+.mdprev h1,.mdprev h2,.mdprev h3{border-bottom:1px dotted var(--line);margin:10px 0 4px}
+.mdprev code{background:var(--bg);border:1px solid var(--line);padding:0 4px}
+.mdprev a{color:var(--fg)}
+.mdprev ul{margin:4px 0;padding-left:22px}
+.opts input[type=range]{width:110px;vertical-align:middle}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.file{border:1px solid var(--line);background:var(--panel);margin-bottom:10px}
+.fh{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 10px;border-bottom:1px solid var(--line)}
+.fh .n{flex:1;min-width:140px;overflow-wrap:anywhere}
+.tag{border:1px solid var(--dim);color:var(--dim);padding:0 6px;font-size:17px}
+.tag.ok{border-color:var(--fg);color:var(--fg)}
+.fb{padding:8px 10px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:320px}
+td,th{text-align:left;padding:1px 10px 1px 0;vertical-align:top}
+th{color:var(--dim);font-weight:400}
+td:first-child{color:var(--dim);white-space:nowrap}
+td:nth-child(2){white-space:nowrap}
+td:last-child{overflow-wrap:anywhere}
+.sec{color:var(--dim);margin:10px 0 2px;border-bottom:1px dotted var(--line)}
+.empty{color:var(--dim)}
+.soon{border:1px dashed var(--line);padding:30px;text-align:center;color:var(--dim)}
+#msg{color:var(--dim);min-height:24px;margin-top:6px}
+footer{margin-top:30px;color:var(--dim);border-top:2px solid var(--line);padding-top:10px}
+@media(max-width:700px){.layout{grid-template-columns:1fr}nav{flex-direction:row;flex-wrap:wrap}nav small{display:none}#skull{font-size:5px;line-height:5px}h1{font-size:22px}}
+.st{position:relative;z-index:1;height:260px;max-width:560px;overflow:hidden;border:1px solid var(--line);cursor:ew-resize;user-select:none;touch-action:none;margin:8px 10px;isolation:isolate}
+.st img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;background:#000}
+.ln{position:absolute;top:0;bottom:0;left:50%;width:2px;margin-left:-1px;background:var(--fg);pointer-events:none;box-shadow:0 0 8px var(--fg)}
+.ln s{position:absolute;top:50%;left:-13px;width:28px;height:28px;margin-top:-14px;border:2px solid var(--fg);background:var(--bg);border-radius:50%}
+.lb{position:absolute;top:8px;background:var(--bg);border:1px solid var(--fg);padding:0 8px;pointer-events:none;font-size:16px}
+.lb.l{left:8px}.lb.r{right:8px}
+.hs{font-size:22px;overflow-wrap:anywhere}
+@media(max-width:700px){.st{max-width:none}}
+</style>
+</head>
+<body>
+<div class="edge l"></div><div class="edge r"></div>
+<div class="wrap">
+<header>
+  <pre id="skull" aria-hidden="true"></pre>
+  <div><h1>THE ULTIMATE FILE EDITOR<i>_</i></h1><div class="sub">МЕТАДАННЫЕ · СЖАТИЕ · ТЕКСТ · ХЕШ // v0.5</div></div>
+  <div class="sw"><button data-t="green" class="on" title="Зелёная тема">[G]</button><button data-t="red" title="Красная тема">[R]</button></div>
+</header>
+<div class="layout">
+  <nav id="nav"></nav>
+  <main id="panel"></main>
+</div>
+<footer>&gt; Всё работает локально в браузере. Файлы никуда не загружаются.</footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+/* ---------- utils ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const b2s=u=>{let s='';for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return s};
+const s2b=s=>{const u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u};
+const fmt=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':(n/1048576).toFixed(2)+' MB';
+const xtag=(x,n)=>{const m=x.match(new RegExp('<'+n+'[^>]*>([^<]*)</'+n+'>'));return m?m[1].trim().replace(/&amp;/g,'&'):''};
+const blob2u=async b=>new Uint8Array(await new Blob(b).arrayBuffer());
+
+/* ---------- skull ---------- */
+function skull(){let o='';for(let y=0;y<17;y++){for(let x=0;x<20;x++){
+  const cr=((x-9.5)/9.5)**2+((y-6.5)/7)**2<=1&&y<=12,jaw=y>=12&&y<=16&&x>=4&&x<=15;
+  const eye=y>=6&&y<=9&&((x>=3&&x<=7)||(x>=12&&x<=16)),nose=y>=10&&y<=11&&(x==9||x==10),tooth=y>=14&&(x==7||x==9||x==12);
+  o+=(cr||jaw)&&!eye&&!nose&&!tooth?(Math.random()<.5?'0':'1'):' '}o+='\n'}$('#skull').textContent=o}
+skull();setInterval(skull,700);
+
+/* ---------- theme ---------- */
+document.querySelectorAll('.sw button').forEach(b=>b.onclick=()=>{
+  document.documentElement.dataset.theme=b.dataset.t;
+  document.querySelectorAll('.sw button').forEach(x=>x.classList.toggle('on',x==b));
+  try{localStorage.setItem('nm-theme',b.dataset.t)}catch(e){}});
+try{const t=localStorage.getItem('nm-theme');if(t)document.querySelector(`.sw [data-t=${t}]`)?.click()}catch(e){}
+
+/* ---------- format handlers ----------
+   Чтобы добавить формат: объект {ext:[...], read(u)->[[группа,поле,значение]], clean(u,opts)->Uint8Array} в HANDLERS */
+const CORE=['dc:creator','cp:lastModifiedBy','dc:title','dc:subject','cp:keywords','dc:description','cp:category','cp:contentStatus','dcterms:created','dcterms:modified','cp:revision'];
+const APP=['Company','Manager','Template','TotalTime','HyperlinkBase','Application','AppVersion','Pages','Words'];
+const ooxml={ext:['docx','xlsx','pptx','docm','xlsm','pptm','dotx','xltx','potx'],
+ async read(u){const z=await JSZip.loadAsync(u),r=[],g=async p=>z.file(p)?z.file(p).async('string'):'';
+  const c=await g('docProps/core.xml'),a=await g('docProps/app.xml'),cu=await g('docProps/custom.xml');
+  CORE.forEach(k=>{const v=xtag(c,k);if(v)r.push(['Основные (core)',k.split(':')[1],v])});
+  APP.forEach(k=>{const v=xtag(a,k);if(v)r.push(['Приложение (app)',k,v])});
+  [...cu.matchAll(/<property [^>]*name="([^"]*)"[^>]*>([\s\S]*?)<\/property>/g)].forEach(m=>r.push(['Пользовательские (custom)',m[1],m[2].replace(/<[^>]+>/g,'')]));
+  const names=Object.keys(z.files);
+  if(names.some(f=>/thumbnail/i.test(f)))r.push(['Внутри файла','миниатюра','есть']);
+  const cm=names.filter(f=>/(^|\/)comments\d*\.xml$/.test(f));if(cm.length)r.push(['Внутри файла','комментарии',cm.length+' шт.']);
+  const d=await g('word/document.xml'),rv=(d.match(/<w:(ins|del) /g)||[]).length;if(rv)r.push(['Внутри файла','исправления (track changes)',rv]);
+  return r},
+ async clean(u,o){const z=await JSZip.loadAsync(u);
+  const ed=async(p,f)=>{if(z.file(p))z.file(p,f(await z.file(p).async('string')))};
+  const bl=(x,k,v)=>x.replace(new RegExp('(<'+k+'[^>]*>)[^<]*(</'+k+'>)','g'),'$1'+v+'$2');
+  if(o.core)await ed('docProps/core.xml',x=>{CORE.forEach(k=>x=bl(x,k,k.startsWith('dcterms')?'2000-01-01T00:00:00Z':k=='cp:revision'?'1':''));return x});
+  if(o.app)await ed('docProps/app.xml',x=>{['Company','Manager','Template','HyperlinkBase'].forEach(k=>x=bl(x,k,''));return bl(x,'TotalTime','0')});
+  if(o.custom)await ed('docProps/custom.xml',x=>x.replace(/(<Properties[^>]*>)[\s\S]*<\/Properties>/,'$1</Properties>'));
+  if(o.thumb){Object.keys(z.files).filter(f=>/thumbnail/i.test(f)).forEach(f=>z.remove(f));await ed('_rels/.rels',x=>x.replace(/<Relationship [^>]*thumbnail[^>]*\/>/gi,''))}
+  return z.generateAsync({type:'uint8array',compression:'DEFLATE'})}};
+
+const PK='Title|Author|Subject|Keywords|Creator|Producer|CreationDate|ModDate';
+const PRE=()=>new RegExp('/('+PK+')(\\s*)(\\((?:\\\\.|[^\\\\)])*\\)|<[0-9A-Fa-f\\s]*>)','g');
+const hexs=h=>{h=h.replace(/\s/g,'');let s='';for(let i=0;i<h.length;i+=2)s+=String.fromCharCode(parseInt(h.substr(i,2),16));return s.startsWith('\xFE\xFF')?s.slice(2).replace(/\0/g,''):s};
+const pdf={ext:['pdf'],
+ read(u){const s=b2s(u),r=[];for(const m of s.matchAll(PRE())){const v=m[3][0]=='<'?hexs(m[3].slice(1,-1)):m[3].slice(1,-1);if(v.trim())r.push(['Info',m[1],v])}
+  if(/<x:xmpmeta/.test(s))r.push(['Внутри файла','XMP-пакет','есть']);return r},
+ clean(u){let s=b2s(u);
+  s=s.replace(PRE(),(m,k,w,v)=>'/'+k+w+v[0]+(v[0]=='('?' '.repeat(v.length-2):'20'.repeat(Math.ceil((v.length-2)/2)).slice(0,v.length-2))+(v[0]=='('?')':'>'));
+  s=s.replace(/<x:xmpmeta[\s\S]*?<\/x:xmpmeta>/g,b=>b.replace(/>([^<>]+)</g,(m,t)=>'>'+' '.repeat(t.length)+'<'));
+  return s2b(s)}}; /* замена пробелами той же длины — xref не ломается; метаданные внутри сжатых object streams не затрагиваются */
+
+const jpg={ext:['jpg','jpeg'],
+ segs(u){const o=[];let p=2;while(p<u.length-3&&u[p]==255){const m=u[p+1];if(m==0xDA)break;const l=(u[p+2]<<8|u[p+3])+2;o.push({m,p,l});p+=l}return o},
+ exif(t,r){try{const le=t[0]==0x49,dv=new DataView(t.buffer,t.byteOffset,t.byteLength),a16=o=>dv.getUint16(o,le),a32=o=>dv.getUint32(o,le);
+  const N={0x10F:'Make',0x110:'Model',0x131:'Software',0x132:'DateTime',0x13B:'Artist',0x8298:'Copyright'};
+  const o=a32(4),n=a16(o);for(let i=0;i<n;i++){const e=o+2+i*12,tg=a16(e);
+   if(N[tg]){const c=a32(e+4),a=c>4?a32(e+8):e+8;r.push(['EXIF',N[tg],b2s(t.subarray(a,a+c-1))])}
+   if(tg==0x8825)r.push(['EXIF','GPS','координаты есть'])}}catch(e){}},
+ read(u){const r=[];for(const s of this.segs(u)){
+  if(s.m==0xE1){if(b2s(u.subarray(s.p+4,s.p+8))=='Exif'){r.push(['Внутри файла','EXIF-блок',fmt(s.l)]);this.exif(u.subarray(s.p+10,s.p+s.l),r)}else r.push(['Внутри файла','XMP/APP1',fmt(s.l)])}
+  else if(s.m==0xED)r.push(['Внутри файла','IPTC/Photoshop',fmt(s.l)]);
+  else if(s.m==0xFE)r.push(['Внутри файла','комментарий',b2s(u.subarray(s.p+4,s.p+s.l)).slice(0,80)])}return r},
+ clean(u){const out=[u.subarray(0,2)];let last=2;for(const s of this.segs(u))if([0xE1,0xED,0xFE].includes(s.m)){out.push(u.subarray(last,s.p));last=s.p+s.l}out.push(u.subarray(last));return blob2u(out)}};
+
+const PT=/^(tEXt|iTXt|zTXt|eXIf|tIME)$/;
+const png={ext:['png'],
+ ch(u){const o=[],dv=new DataView(u.buffer,u.byteOffset);let p=8;while(p<u.length-11){const l=dv.getUint32(p);o.push({t:b2s(u.subarray(p+4,p+8)),p,l:l+12});p+=l+12}return o},
+ read(u){const r=[];for(const c of this.ch(u)){if(/^[ziT]*[Ee]?Xt$/i.test(c.t)&&c.t!='eXIf')r.push(['Текст',b2s(u.subarray(c.p+8,c.p+8+Math.min(40,c.l-12))).split('\0')[0]||c.t,fmt(c.l)]);else if(c.t=='eXIf')r.push(['Внутри файла','EXIF-блок',fmt(c.l)]);else if(c.t=='tIME')r.push(['Внутри файла','время изменения','есть'])}return r},
+ clean(u){return blob2u([u.subarray(0,8),...this.ch(u).filter(c=>!PT.test(c.t)).map(c=>u.subarray(c.p,c.p+c.l))])}};
+
+/* ---------- OLE/CFBF (.doc/.xls/.ppt) ----------
+   Бинарный контейнер старого Office (MS-CFB). Метаданные лежат в потоках
+   \x05SummaryInformation / \x05DocumentSummaryInformation как property set (MS-OLEPS).
+   Значения стираем на месте (пробелами/нулями той же длины) — без пересборки FAT. */
+const EOC=0xFFFFFFFE,FREESECT=0xFFFFFFFF;
+const u32le=(dv,o)=>dv.getUint32(o,true),u16le=(dv,o)=>dv.getUint16(o,true);
+function oleOpen(buf){
+ const dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength);
+ if(buf[0]!=0xD0||buf[1]!=0xCF||buf[2]!=0x11||buf[3]!=0xE0)throw Error('не OLE-контейнер (CFBF)');
+ const ss=1<<u16le(dv,30),mss=1<<u16le(dv,32),nFat=u32le(dv,44),dirStart=u32le(dv,48),miniCut=u32le(dv,56),miniFatStart=u32le(dv,60),difStart=u32le(dv,68),nDif=u32le(dv,72);
+ const secOff=s=>512+s*ss;
+ let fatSecs=[];for(let i=0;i<109;i++){const v=u32le(dv,76+i*4);if(v!=FREESECT)fatSecs.push(v)}
+ let d=difStart,g=0;while(d!=EOC&&d!=FREESECT&&g++<nDif+2){const o=secOff(d),n=ss/4;for(let i=0;i<n-1;i++){const v=u32le(dv,o+i*4);if(v!=FREESECT)fatSecs.push(v)}d=u32le(dv,o+(n-1)*4)}
+ fatSecs=fatSecs.slice(0,nFat);
+ const fat=new Uint32Array(fatSecs.length*(ss/4));
+ fatSecs.forEach((sec,i)=>{const o=secOff(sec);for(let j=0;j<ss/4;j++)fat[i*(ss/4)+j]=u32le(dv,o+j*4)});
+ const chain=start=>{const out=[];let s=start,g2=0;while(s!=EOC&&s!=FREESECT&&g2++<1e5){out.push(s);s=fat[s]}return out};
+ const dirSecs=chain(dirStart),entries=[];
+ dirSecs.forEach(sec=>{const o=secOff(sec);for(let i=0;i<ss/128;i++){const e=o+i*128,nl=u16le(dv,e+64);if(nl<2)continue;const type=buf[e+66];if(!type)continue;
+  let name='';for(let c=0;c<nl/2-1;c++)name+=String.fromCharCode(u16le(dv,e+c*2));
+  entries.push({name,type,start:u32le(dv,e+116),size:u32le(dv,e+120)})}});
+ const root=entries.find(e=>e.type==5);
+ const miniChain=root?chain(root.start):[];
+ const miniFatSecs=chain(miniFatStart);
+ const miniFat=new Uint32Array(miniFatSecs.length*(ss/4));
+ miniFatSecs.forEach((sec,i)=>{const o=secOff(sec);for(let j=0;j<ss/4;j++)miniFat[i*(ss/4)+j]=u32le(dv,o+j*4)});
+ const miniChainOf=start=>{const out=[];let s=start,g3=0;while(s!=EOC&&s!=FREESECT&&g3++<1e5){out.push(s);s=miniFat[s]}return out};
+ function locate(entry,off){
+  if(entry.size<miniCut){const mi=Math.floor(off/mss),io=off%mss,msec=miniChainOf(entry.start)[mi],mb=msec*mss,ri=Math.floor(mb/ss),ro=mb%ss;return secOff(miniChain[ri])+ro+io}
+  const si=Math.floor(off/ss),io=off%ss;return secOff(chain(entry.start)[si])+io}
+ function readStream(entry){const out=new Uint8Array(entry.size);let r=0;
+  if(entry.size<miniCut){miniChainOf(entry.start).forEach(msec=>{const mb=msec*mss,ri=Math.floor(mb/ss),ro=mb%ss,src=secOff(miniChain[ri])+ro,len=Math.min(mss,entry.size-r);out.set(buf.subarray(src,src+len),r);r+=len})}
+  else{chain(entry.start).forEach(sec=>{const src=secOff(sec),len=Math.min(ss,entry.size-r);out.set(buf.subarray(src,src+len),r);r+=len})}
+  return out}
+ function writeAt(entry,off,bytes){const unit=entry.size<miniCut?mss:ss;let w=0;
+  while(w<bytes.length){const abs=locate(entry,off+w),uo=(off+w)%unit,n=Math.min(bytes.length-w,unit-uo);buf.set(bytes.subarray(w,w+n),abs);w+=n}}
+ return{entries,readStream,writeAt}}
+
+const OLE_SUM={2:'Title',3:'Subject',4:'Author',5:'Keywords',6:'Comments',7:'Template',8:'LastAuthor',9:'RevNumber',12:'CreateTime',13:'LastSavedTime',18:'AppName'};
+const OLE_DSUM={14:'Manager',15:'Company'};
+function olePropSet(data){
+ const dv=new DataView(data.buffer,data.byteOffset,data.byteLength);
+ const off0=u32le(dv,44),cnt=u32le(dv,off0+4),out=[];
+ for(let i=0;i<cnt;i++){const id=u32le(dv,off0+8+i*8),o=off0+u32le(dv,off0+8+i*8+4);out.push({id,off:o,type:u32le(dv,o)})}
+ return out}
+function oleReadVal(dv,data,type,o){const vo=o+4;
+ if(type==30){const len=u32le(dv,vo),by=data.subarray(vo+4,vo+4+Math.max(0,len-1));let s;try{s=new TextDecoder('windows-1251').decode(by)}catch(e){s=b2s(by)}return{str:s.trim(),valOff:vo+4,byteLen:len,wide:false}}
+ if(type==31){const len=u32le(dv,vo),by=data.subarray(vo+4,vo+4+Math.max(0,len-1)*2);let s='';for(let i=0;i+1<by.length;i+=2)s+=String.fromCharCode(by[i]|(by[i+1]<<8));return{str:s.trim(),valOff:vo+4,byteLen:len*2,wide:true}}
+ if(type==64){const lo=u32le(dv,vo),hi=u32le(dv,vo+4);if(!lo&&!hi)return{str:'',valOff:vo,byteLen:8,ft:true};const ms=(hi*4294967296+lo)/10000-11644473600000,d=new Date(ms);return{str:isNaN(d)?'':d.toISOString(),valOff:vo,byteLen:8,ft:true}}
+ return null}
+const ole={ext:['doc','dot','xls','xlt','ppt','pot'],
+ findStreams(buf){const o=oleOpen(buf);return{o,sum:o.entries.find(e=>e.type==2&&/^\x05SummaryInformation$/i.test(e.name)),dsum:o.entries.find(e=>e.type==2&&/^\x05DocumentSummaryInformation$/i.test(e.name))}},
+ read(buf){const r=[],{o,sum,dsum}=this.findStreams(buf);
+  if(sum){const data=o.readStream(sum),dv=new DataView(data.buffer,data.byteOffset,data.byteLength);
+   olePropSet(data).forEach(p=>{const nm=OLE_SUM[p.id];if(!nm)return;const v=oleReadVal(dv,data,p.type,p.off);if(v&&v.str)r.push(['SummaryInformation',nm,v.str])})}
+  if(dsum){const data=o.readStream(dsum),dv=new DataView(data.buffer,data.byteOffset,data.byteLength);
+   olePropSet(data).forEach(p=>{const nm=OLE_DSUM[p.id];if(!nm)return;const v=oleReadVal(dv,data,p.type,p.off);if(v&&v.str)r.push(['DocumentSummaryInformation',nm,v.str])})}
+  if(!sum&&!dsum)r.push(['Внутри файла','статус','SummaryInformation не найден']);
+  return r},
+ clean(buf0,opts){const buf=buf0.slice(),{o,sum,dsum}=this.findStreams(buf);
+  const CORE=['Title','Subject','Author','Keywords','Comments','RevNumber','CreateTime','LastSavedTime'],APP=['Template','LastAuthor','AppName'],APP2=['Manager','Company'];
+  const wipe=(entry,data,dv,p,nm)=>{const v=oleReadVal(dv,data,p.type,p.off);if(!v||!v.str)return;
+   const unit=v.wide?2:1,n=v.ft?8:(v.byteLen-unit);
+   o.writeAt(entry,v.valOff,v.ft?new Uint8Array(8):new Uint8Array(n).fill(v.wide?0:0x20));
+   if(v.wide&&!v.ft)for(let i=0;i<n;i+=2)o.writeAt(entry,v.valOff+i,new Uint8Array([0x20,0]))};
+  if(sum){const data=o.readStream(sum),dv=new DataView(data.buffer,data.byteOffset,data.byteLength);
+   olePropSet(data).forEach(p=>{const nm=OLE_SUM[p.id];if(!nm)return;if((opts.core&&CORE.includes(nm))||(opts.app&&APP.includes(nm)))wipe(sum,data,dv,p,nm)})}
+  if(dsum){const data=o.readStream(dsum),dv=new DataView(data.buffer,data.byteOffset,data.byteLength);
+   olePropSet(data).forEach(p=>{const nm=OLE_DSUM[p.id];if(!nm)return;if(opts.app&&APP2.includes(nm))wipe(dsum,data,dv,p,nm)})}
+  return buf}};
+
+const HANDLERS=[ooxml,pdf,jpg,png,ole];
+const handlerFor=n=>{const e=n.split('.').pop().toLowerCase();return HANDLERS.find(h=>h.ext.includes(e))};
+
+/* ---------- tool registry ----------
+   Новый инструмент: добавить запись в TOOLS и функцию в VIEWS */
+const TOOLS=[{id:'meta',label:'META.CLEAN',on:1},{id:'comp',label:'FILE.COMPRESS',on:1},{id:'conv',label:'FILE.CONVERT',on:1},{id:'hash',label:'HASH.CHECK',on:1},{id:'redact',label:'TEXT.REDACT',on:1},{id:'note',label:'TEXT.NOTEPAD',on:1},{id:'flat',label:'PDF.FLATTEN'}];
+/* ---------- TEXT.NOTEPAD: сырое чтение/запись текста, смена кодировки, создание с нуля, .md ---------- */
+const ENC_LIST=[['utf-8','UTF-8'],['windows-1251','Windows-1251 (кириллица)'],['koi8-r','KOI8-R'],['ibm866','CP866 (DOS)'],['windows-1252','Windows-1252 (Latin)'],['iso-8859-1','ISO-8859-1'],['utf-16le','UTF-16LE'],['utf-16be','UTF-16BE']];
+function decodeWith(label,buf){
+ if(label=='utf-16be'){const sw=new Uint8Array(buf.length);for(let i=0;i+1<buf.length;i+=2){sw[i]=buf[i+1];sw[i+1]=buf[i]}return new TextDecoder('utf-16le').decode(sw)}
+ try{return new TextDecoder(label,{fatal:false}).decode(buf)}catch(e){throw Error('кодировка не поддерживается браузером: '+label)}}
+const sbCache={};
+function sbTable(label){if(sbCache[label])return sbCache[label];const bytes=new Uint8Array(256);for(let i=0;i<256;i++)bytes[i]=i;const str=new TextDecoder(label).decode(bytes),map={};for(let i=0;i<256;i++)map[str[i]]=i;sbCache[label]=map;return map}
+function encodeWith(label,text){
+ if(label=='utf-8')return new TextEncoder().encode(text);
+ if(label=='utf-16le'){const out=new Uint8Array(text.length*2);for(let i=0;i<text.length;i++){const c=text.charCodeAt(i);out[i*2]=c&255;out[i*2+1]=c>>8}return out}
+ if(label=='utf-16be'){const out=new Uint8Array(text.length*2);for(let i=0;i<text.length;i++){const c=text.charCodeAt(i);out[i*2]=c>>8;out[i*2+1]=c&255}return out}
+ const map=sbTable(label),out=new Uint8Array(text.length);for(let i=0;i<text.length;i++)out[i]=map[text[i]]??0x3F;return out}
+function mdToHtml(src){let h=esc(src);
+ h=h.replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>');
+ h=h.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/(?<!\*)\*([^*]+)\*(?!\*)/g,'<i>$1</i>').replace(/`([^`]+)`/g,'<code>$1</code>');
+ h=h.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+ h=h.replace(/^- (.*)$/gm,'<li>$1</li>');
+ h=h.replace(/(<li>[\s\S]*?<\/li>\n?)+/g,m=>'<ul>'+m+'</ul>');
+ return h.split(/\n{2,}/).map(bl=>/^<h[1-3]>|^<ul>/.test(bl.trim())?bl:bl.trim()?'<p>'+bl.replace(/\n/g,'<br>')+'</p>':'').join('')}
+let note={name:'',buf:null,text:'',encIn:'utf-8',encOut:'utf-8',active:0,mdPreview:0};
+const nmsg=t=>{const m=$('#nmsg');if(m)m.textContent=t?'> '+t:''};
+async function openNote(file){
+ if(file.size>8*1024*1024){nmsg('файл слишком большой для блокнота (>8 МБ)');return}
+ try{note.buf=new Uint8Array(await file.arrayBuffer());note.name=file.name;note.active=1;redecodeNote()}catch(e){nmsg('не удалось прочитать файл')}}
+function redecodeNote(){try{note.text=decodeWith(note.encIn,note.buf);noteView($('#panel'))}catch(e){nmsg(e.message)}}
+function newNote(){note={name:'untitled.txt',buf:null,text:'',encIn:note.encIn,encOut:note.encOut,active:1,mdPreview:note.mdPreview};noteView($('#panel'))}
+function setExt(ext){note.name=(note.name||'untitled').replace(/\.[^.]+$/,'')+'.'+ext;const i=$('#nname');if(i)i.value=note.name}
+function noteView(p){
+ p.innerHTML=`<div class="warn"><b>ВАЖНО</b><span>Откройте файл как есть или создайте новый — если текст выглядит кракозябрами, подберите кодировку ниже. Содержимое можно свободно редактировать, как в обычном блокноте, и сохранить в любом формате.</span></div>
+ <div id="drop"><big>[ ОТКРЫТЬ ФАЙЛ ]</big>или нажмите для выбора · любой текстовый файл</div><input id="inp" type="file" hidden>
+ <div class="opts"><label>Кодировка при чтении ${sel('ein',ENC_LIST,note.encIn)}</label>
+  <label>Имя файла <input type="text" id="nname" value="${esc(note.name||'untitled.txt')}" size="22" ${note.active?'':'disabled'}></label>
+  <button id="eTxt" ${note.active?'':'disabled'}>.TXT</button><button id="eMd" ${note.active?'':'disabled'}>.MD</button>
+  <label><input type="checkbox" id="nmd" ${note.mdPreview?'checked':''} ${note.active?'':'disabled'}> предпросмотр Markdown</label></div>
+ <textarea id="nta" rows="16" style="width:100%;max-width:900px;display:block" spellcheck="false" placeholder="файл не открыт" ${note.active?'':'disabled'}>${esc(note.text||'')}</textarea>
+ ${note.mdPreview?`<div id="npre" class="mdprev">${mdToHtml(note.text||'')}</div>`:''}
+ <div class="opts"><label>Сохранить в кодировке ${sel('eout',ENC_LIST,note.encOut)}</label></div>
+ <div class="bar"><button id="nnew">СОЗДАТЬ НОВЫЙ</button><button id="nsave" ${note.active?'':'disabled'}>СКАЧАТЬ</button><button id="nclr" ${note.active?'':'disabled'}>ЗАКРЫТЬ</button></div>
+ <div id="nmsg"></div>`;
+ const d=$('#drop'),inp=$('#inp');
+ d.onclick=()=>inp.click();inp.onchange=()=>{if(inp.files[0])openNote(inp.files[0]);inp.value=''};
+ d.ondragover=e=>{e.preventDefault();d.classList.add('over')};d.ondragleave=()=>d.classList.remove('over');
+ d.ondrop=e=>{e.preventDefault();d.classList.remove('over');if(e.dataTransfer.files[0])openNote(e.dataTransfer.files[0])};
+ $('#ein').onchange=e=>{note.encIn=e.target.value;if(note.buf)redecodeNote()};
+ $('#eout').onchange=e=>note.encOut=e.target.value;
+ const nn=$('#nname');if(nn)nn.oninput=e=>note.name=e.target.value||'untitled.txt';
+ const et=$('#eTxt');if(et)et.onclick=()=>setExt('txt');const em=$('#eMd');if(em)em.onclick=()=>setExt('md');
+ const ta=$('#nta');if(ta)ta.oninput=e=>{note.text=e.target.value;if(note.mdPreview){const pv=$('#npre');if(pv)pv.innerHTML=mdToHtml(note.text)}};
+ $('#nnew').onclick=newNote;
+ const md=$('#nmd');if(md)md.onchange=e=>{note.mdPreview=e.target.checked?1:0;noteView(p)};
+ const sv=$('#nsave');if(sv)sv.onclick=()=>{try{dlFile(note.name||'untitled.txt',encodeWith(note.encOut,note.text||''));nmsg('сохранено: '+(note.name||'untitled.txt'))}catch(e){nmsg('ошибка кодирования: '+e.message)}};
+ const cl=$('#nclr');if(cl)cl.onclick=()=>{note={name:'',buf:null,text:'',encIn:note.encIn,encOut:note.encOut,active:0,mdPreview:0};noteView(p)}}
+
+const VIEWS={meta:workView,comp:workView,conv:workView,redact:workView,note:noteView,hash:hashView};
+let cur='meta';
+function nav(){$('#nav').innerHTML=TOOLS.map(t=>`<button data-id="${t.id}" class="${t.id==cur?'act':''}">${t.on?'&gt;':'#'} ${t.label}</button>`).join('')+'<small>[#] — модуль в разработке</small>';
+ $('#nav').querySelectorAll('button').forEach(b=>b.onclick=()=>{cur=b.dataset.id;files=[];hf=[];nav();show()})}
+function show(){const p=$('#panel');VIEWS[cur]?VIEWS[cur](p):p.innerHTML=`<div class="soon">&gt; МОДУЛЬ «${esc(TOOLS.find(t=>t.id==cur).label)}» НЕ УСТАНОВЛЕН<br>скоро появится</div>`}
+
+/* ---------- WORK: META.CLEAN / FILE.COMPRESS / FILE.CONVERT ---------- */
+let files=[],opts={core:1,app:1,custom:1,thumb:1},uid=0,cfg={q:75,max:0,to:'webp',raw:'',rterms:'',rmask:'█',rregex:0};
+const IMG={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp'};
+const extOf=n=>(n.match(/\.([^.]+)$/)||['',''])[1].toLowerCase();
+const base=n=>n.replace(/\.[^.]+$/,'');
+const lib=src=>new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>no(Error('не загрузилась библиотека (нужен интернет)'));document.head.append(s)});
+/* ---- скачивание: обычная ссылка download, работает в любом браузере локально ---- */
+function dlFile(name,data,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:type||'application/octet-stream'}));a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},5000)}
+/* ---- перекодирование изображения через canvas (метаданные при этом исчезают) ---- */
+async function enc(u,type,q,max,from){const bm=await createImageBitmap(new Blob([u],{type:from}));
+ const s=max?Math.min(1,max/Math.max(bm.width,bm.height)):1,w=Math.round(bm.width*s),h=Math.round(bm.height*s);
+ const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+ if(type=='image/jpeg'){x.fillStyle='#fff';x.fillRect(0,0,w,h)}x.drawImage(bm,0,0,w,h);
+ const b=await new Promise(r=>c.toBlob(r,type,q/100));if(!b||b.type!=type)throw Error('браузер не умеет кодировать '+type);
+ return new Uint8Array(await b.arrayBuffer())}
+async function fitTarget(run){const t=cfg.target*1024;let lo=10,hi=100,best=null;
+ for(let i=0;i<6&&lo<=hi;i++){const q=Math.round((lo+hi)/2),out=await run(q);
+  if(!best||Math.abs(out.length-t)<Math.abs(best.length-t))best=out;
+  if(out.length>t)hi=q-1;else lo=q+1}
+ return best}
+async function compress(f){const e=extOf(f.name),m=IMG[e];let out;
+ if(['jpg','jpeg','webp'].includes(e)){
+  out=cfg.target?await fitTarget(q=>enc(f.buf,m,q,cfg.max,m)):await enc(f.buf,m,cfg.q,cfg.max,m);
+  if(cfg.target)f.note='цель '+cfg.target+' КБ → получено '+Math.round(out.length/1024)+' КБ'}
+ else if(e=='png'){if(cfg.target)f.note='для PNG точный размер недоступен — уменьшите «Макс. сторону»';out=await enc(f.buf,m,cfg.q,cfg.max,m)}
+ else if(ooxml.ext.includes(e)){const run=async q=>{const z=await JSZip.loadAsync(f.buf);
+   for(const n of Object.keys(z.files)){const t=IMG[extOf(n)];if(/\/media\//.test(n)&&['image/jpeg','image/png','image/webp'].includes(t)){const u=await z.file(n).async('uint8array');try{const r=await enc(u,t,q,cfg.max,t);if(r.length<u.length)z.file(n,r)}catch(_){}}}
+   return z.generateAsync({type:'uint8array',compression:'DEFLATE',compressionOptions:{level:9}})};
+  out=cfg.target?await fitTarget(run):await run(cfg.q);
+  if(cfg.target)f.note='цель '+cfg.target+' КБ → получено '+Math.round(out.length/1024)+' КБ'}
+ else if(e=='pdf'){if(cfg.target)f.note='PDF сжимается без потерь — размер не настраивается';await lib('https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js');out=await(await PDFLib.PDFDocument.load(f.buf,{updateMetadata:false})).save({useObjectStreams:true})}
+ else throw Error('сжатие: jpg png webp docx xlsx pptx pdf');
+ if(out.length>=f.buf.length){out=f.buf;f.note=(f.note?f.note+' · ':'')+'уже оптимален'}return out}
+async function convert(f){const e=extOf(f.name);
+ if(cfg.to=='raw'){const x=cfg.raw.replace(/[^\w]/g,'').toLowerCase();if(!x)throw Error('введите новое расширение');f.outName=base(f.name)+'.'+x;f.noCmp=1;return f.buf}
+ if(!IMG[e])throw Error('конвертация только для изображений');
+ f.outName=base(f.name)+'.'+cfg.to;return enc(f.buf,IMG[cfg.to],cfg.q,cfg.max,IMG[e])}
+/* ---------- TEXT.REDACT ---------- */
+const TXT_EXT=['txt','md','csv','tsv','json','xml','html','htm','log','ini','yml','yaml','srt','js','css'];
+const mkRe=t=>{try{return new RegExp(cfg.rregex?t:t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi')}catch(e){throw Error('неверное регулярное выражение: '+t)}};
+async function redact(f){const e=extOf(f.name),terms=(cfg.rterms||'').split('\n').map(s=>s.trim()).filter(Boolean);
+ if(!terms.length)throw Error('введите хотя бы одну строку для поиска');
+ let count=0;const mask=cfg.rmask||'█';
+ if(TXT_EXT.includes(e)){let s=new TextDecoder('utf-8').decode(f.buf);
+  terms.forEach(t=>{s=s.replace(mkRe(t),m=>{count++;return mask.repeat(m.length)||'█'.repeat(m.length)})});
+  f.redCount=count;return new TextEncoder().encode(s)}
+ if(ooxml.ext.includes(e)){const z=await JSZip.loadAsync(f.buf);
+  const names=Object.keys(z.files).filter(n=>/\.xml$/i.test(n)&&/(document|sheet\d*|slide\d*|comments\d*|footnotes|endnotes|header\d*|footer\d*|sharedstrings)\.xml$/i.test(n));
+  for(const n of names){let xml=await z.file(n).async('string');
+   xml=xml.replace(/>([^<]*)</g,(m,t)=>{let t2=t;terms.forEach(term=>{t2=t2.replace(mkRe(term),mm=>{count++;return mask.repeat(mm.length)||'█'.repeat(mm.length)})});return'>'+t2+'<'});
+   z.file(n,xml)}
+  f.redCount=count;return z.generateAsync({type:'uint8array',compression:'DEFLATE'})}
+ if(e=='pdf'){let s=b2s(f.buf);const c=(mask[0]||'X');
+  terms.forEach(t=>{s=s.replace(mkRe(t),m=>{count++;return c.repeat(m.length)})});
+  f.redCount=count;return s2b(s)}
+ throw Error('редактирование текста: txt/md/csv/json/xml/html docx xlsx pptx pdf')}
+
+const MODES={meta:{tag:'.clean',btn:'ОЧИСТИТЬ',run:f=>f.h.clean(f.buf,opts)},comp:{tag:'.min',btn:'СЖАТЬ',run:compress},conv:{tag:'',btn:'КОНВЕРТИРОВАТЬ',run:convert},redact:{tag:'.redacted',btn:'ЗАРЕДАКТИРОВАТЬ',run:redact}};
+const WARN={meta:'Очищайте копии. Старые .doc/.xls/.ppt поддержаны частично: только SummaryInformation/DocumentSummaryInformation, без миниатюр и пользовательских свойств.',comp:'Изображения сжимаются с потерями (метаданные при этом удаляются). PDF — без потерь. Если файл не стал меньше, остаётся оригинал.',conv:'Конвертация — между JPG, PNG и WEBP. «Только сменить расширение» не меняет содержимое файла.',redact:'Каждая строка в поле поиска — отдельный образец для замены (регистр не важен). Для PDF и обычного текста замена той же длины, что и исходный текст; для docx/xlsx/pptx длина не ограничена.'};
+const sel=(id,a,v)=>`<select id="${id}">${a.map(([k,l])=>`<option value="${k}" ${k==v?'selected':''}>${l}</option>`).join('')}</select>`;
+const QM=()=>`<label>Качество <input type="range" id="q" min="10" max="100" value="${cfg.q}" ${cfg.target?'disabled':''}> <b id="qv">${cfg.q}</b>%</label><label>Макс. сторона ${sel('mx',[[0,'оригинал'],[3840,'3840 px'],[2560,'2560 px'],[1920,'1920 px'],[1280,'1280 px'],[800,'800 px']],cfg.max)}</label>`;
+const SZ=()=>cur=='comp'?`<label>Желаемый размер <input type="number" id="tg" min="0" step="1" value="${cfg.target||''}" placeholder="авто" style="width:70px"> КБ</label>`:'';
+const OPT={meta:()=>[['core','Автор, заголовок, даты (core)'],['app','Компания, менеджер, шаблон (app)'],['custom','Свои свойства (custom)'],['thumb','Миниатюра']].map(([k,l])=>`<label><input type="checkbox" data-o="${k}" ${opts[k]?'checked':''}> ${l}</label>`).join(''),
+ comp:()=>QM()+SZ(),conv:()=>`<label>Во что ${sel('to',[['webp','WEBP'],['jpg','JPG'],['png','PNG'],['raw','только сменить расширение']],cfg.to)}</label><label>Новое расширение <input type="text" id="raw" size="6" value="${esc(cfg.raw)}" placeholder="zip"></label>${QM()}`,
+ redact:()=>`<label style="flex:1;min-width:260px">Что искать, по одной строке<br><textarea id="rterms" rows="3" style="width:100%;max-width:420px">${esc(cfg.rterms||'')}</textarea></label><label><input type="checkbox" id="rregex" ${cfg.rregex?'checked':''}> регулярные выражения</label><label>Символ замены <input type="text" id="rmask" size="4" value="${esc(cfg.rmask)}"></label>`};
+function workView(p){
+ p.innerHTML=`<div class="warn"><b>ВАЖНО</b><span>${WARN[cur]}</span></div>
+ <div id="drop"><big>[ ПЕРЕТАЩИТЕ ФАЙЛЫ СЮДА ]</big>или нажмите для выбора${cur=='meta'?' · docx xlsx pptx doc xls ppt pdf jpg png':cur=='redact'?' · txt md csv json xml html docx xlsx pptx pdf':''}</div>
+ <input id="inp" type="file" multiple hidden>
+ <div class="opts">${OPT[cur]()}</div>
+ <div class="bar"><button id="all" disabled>${MODES[cur].btn} ВСЕ</button><button id="zip" disabled>СКАЧАТЬ ZIP</button><button id="clr" disabled>СБРОС</button></div>
+ <div id="msg"></div><div id="list"></div>`;
+ const d=$('#drop'),inp=$('#inp'),on=(s,k,f)=>{const e=$(s);if(e)e[k]=f};
+ d.onclick=()=>inp.click();inp.onchange=()=>{add(inp.files);inp.value=''};
+ d.ondragover=e=>{e.preventDefault();d.classList.add('over')};d.ondragleave=()=>d.classList.remove('over');
+ d.ondrop=e=>{e.preventDefault();d.classList.remove('over');add(e.dataTransfer.files)};
+ p.querySelectorAll('[data-o]').forEach(c=>c.onchange=()=>opts[c.dataset.o]=c.checked?1:0);
+ on('#q','oninput',e=>{cfg.q=+e.target.value;$('#qv').textContent=cfg.q});on('#mx','onchange',e=>cfg.max=+e.target.value);
+ on('#to','onchange',e=>cfg.to=e.target.value);on('#raw','oninput',e=>cfg.raw=e.target.value);
+ on('#tg','oninput',e=>{cfg.target=+e.target.value||0;const q=$('#q');if(q)q.disabled=!!cfg.target});
+ on('#rterms','oninput',e=>cfg.rterms=e.target.value);on('#rregex','onchange',e=>cfg.rregex=e.target.checked?1:0);on('#rmask','oninput',e=>cfg.rmask=e.target.value||'█');
+ $('#all').onclick=async()=>{for(const f of files)if(!f.out)await cleanOne(f);draw()};
+ $('#zip').onclick=saveZip;$('#clr').onclick=()=>{files.forEach(freeCmp);files=[];draw()};draw()}
+const msg=t=>{const m=$('#msg');if(m)m.textContent=t?'> '+t:''};
+async function add(list){for(const file of list){const f={id:++uid,name:file.name,size:file.size,h:handlerFor(file.name)};files.push(f);
+  if(cur=='meta'&&!f.h){f.err='формат не поддерживается';continue}
+  try{f.buf=new Uint8Array(await file.arrayBuffer());if(cur=='meta')f.before=await f.h.read(f.buf)}catch(e){f.err='не удалось прочитать файл'}}draw()}
+function freeCmp(f){if(f._u1){URL.revokeObjectURL(f._u1);f._u1=null}if(f._u2){URL.revokeObjectURL(f._u2);f._u2=null}}
+async function cleanOne(f){if(!f.buf||f.err)return;f.outName=null;f.note='';f.fail='';f.noCmp=0;freeCmp(f);
+ try{f.out=await MODES[cur].run(f);f.outName=f.outName||f.name.replace(/(\.[^.]+)$/,MODES[cur].tag+'$1');if(cur=='meta')f.after=await f.h.read(f.out);
+  if((cur=='comp'||cur=='conv')&&IMG[extOf(f.name)]&&IMG[extOf(f.outName)]){f._u1=URL.createObjectURL(new Blob([f.buf],{type:IMG[extOf(f.name)]}));f._u2=URL.createObjectURL(new Blob([f.out],{type:IMG[extOf(f.outName)]}))}
+ }catch(e){f.fail=e.message||'ошибка'}}
+function save(f){dlFile(f.outName,f.out);msg('сохранено: '+f.outName)}
+async function saveZip(){const z=new JSZip(),used=new Set();
+ files.filter(f=>f.out).forEach(f=>{let n=f.outName,i=1;while(used.has(n))n=(i++)+'_'+f.outName;used.add(n);z.file(n,f.out)});
+ try{dlFile('ultimate_file_editor.zip',await z.generateAsync({type:'uint8array'}),'application/zip');msg('архив сохранён')}catch(e){msg('не удалось собрать архив')}}
+function table(rows){if(!rows.length)return'<div class="empty">&gt; метаданных не найдено</div>';
+ const g={};rows.forEach(r=>(g[r[0]]=g[r[0]]||[]).push(r));
+ return Object.entries(g).map(([k,v])=>`<div class="sec">[ ${esc(k)} ]</div><table>${v.map(r=>`<tr><td>${esc(r[1])}</td><td>=</td><td>${esc(r[2])}</td></tr>`).join('')}</table>`).join('')}
+function draw(){const l=$('#list');if(!l)return;const M=cur=='meta';
+ const tag=f=>f.err?`<span class="tag">ERR: ${esc(f.err)}</span>`:f.out?`<span class="tag ok">${M?`ОЧИЩЕН ${f.before.length}→${f.after.length}`:cur=='redact'?`ЗАМЕН: ${f.redCount||0}`:`${fmt(f.size)}→${fmt(f.out.length)}${f.note?' · '+esc(f.note):cur=='comp'?' · −'+Math.round(100-f.out.length/f.size*100)+'%':''}`}</span>`:f.fail?`<span class="tag">ERR: ${esc(f.fail)}</span>`:M&&f.before?`<span class="tag">ПОЛЕЙ: ${f.before.length}</span>`:'';
+const cmpOk=f=>f._u1&&f._u2;
+ const cmpBlock=f=>cmpOk(f)?`<div class="st" data-cmp="${f.id}"><img src="${f._u1}" alt=""><img class="top" src="${f._u2}" alt="" style="clip-path:inset(0 0 0 ${f.cmpPct??50}%)"><i class="ln" style="left:${f.cmpPct??50}%"><s></s></i><span class="lb l">ДО · ${fmt(f.size)}</span><span class="lb r">ПОСЛЕ · ${fmt(f.out.length)} (${f.out.length<=f.size?'−':'+'}${Math.abs(Math.round(100-f.out.length/f.size*100))}%)</span></div>`:'';
+ l.innerHTML=files.map(f=>`<div class="file"><div class="fh"><span class="n">${esc(f.name)}${f.out?' → '+esc(f.outName):''}</span><span class="tag">${fmt(f.size)}</span>${tag(f)}
+  ${f.buf&&!f.err?(f.out?`<button data-s="${f.id}">СОХРАНИТЬ</button>`:`<button data-c="${f.id}">${MODES[cur].btn}</button>`):''}<button data-x="${f.id}">✕</button></div>
+  ${f.err?'':M?(f.before||f.after?`<div class="fb">${f.out?'<div class="sec">&gt; ПОСЛЕ ОЧИСТКИ</div>'+table(f.after):table(f.before)}</div>`:''):cmpBlock(f)}</div>`).join('');
+ l.querySelectorAll('[data-c]').forEach(b=>b.onclick=async()=>{b.disabled=true;await cleanOne(files.find(f=>f.id==b.dataset.c));draw()});
+ l.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>save(files.find(f=>f.id==b.dataset.s)));
+ l.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{freeCmp(files.find(f=>f.id==b.dataset.x));files=files.filter(f=>f.id!=b.dataset.x);draw()});
+ l.querySelectorAll('[data-cmp]').forEach(el=>{const f=files.find(x=>x.id==el.dataset.cmp);
+  const mv=x=>{const r=el.getBoundingClientRect(),p=Math.max(0,Math.min(100,(x-r.left)/r.width*100));f.cmpPct=p;el.querySelector('.top').style.clipPath=`inset(0 0 0 ${p}%)`;el.querySelector('.ln').style.left=p+'%'};
+  el.onpointerdown=e=>{el.setPointerCapture(e.pointerId);mv(e.clientX);el.onpointermove=e=>mv(e.clientX)};el.onpointerup=()=>el.onpointermove=null});
+ $('#all').disabled=!files.some(f=>f.buf&&!f.err);$('#clr').disabled=!files.length;$('#zip').disabled=!files.some(f=>f.out)}
+
+/* ---------- HASH.CHECK ---------- */
+let hf=[],hc={alg:'SHA-256',exp:''};
+async function hashOne(f){try{if(!crypto.subtle)throw 0;const d=await crypto.subtle.digest(hc.alg,f.buf);f.hash=[...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,'0')).join('');f.alg=hc.alg}catch(e){f.err='crypto.subtle недоступен (нужен https или localhost)'}}
+function hashView(p){
+ p.innerHTML=`<div class="warn"><b>ВАЖНО</b><span>Хеш считается локально. Вставьте ожидаемый хеш — файлы будут проверены на совпадение. MD5 браузер не поддерживает.</span></div>
+ <div id="drop"><big>[ ПЕРЕТАЩИТЕ ФАЙЛЫ СЮДА ]</big>или нажмите для выбора · любые файлы</div><input id="inp" type="file" multiple hidden>
+ <div class="opts"><label>Алгоритм ${sel('alg',[['SHA-256','SHA-256'],['SHA-1','SHA-1'],['SHA-384','SHA-384'],['SHA-512','SHA-512']],hc.alg)}</label><label>Ожидаемый хеш <input type="text" id="exp" size="44" value="${esc(hc.exp)}" placeholder="вставьте для проверки"></label></div>
+ <div class="bar"><button id="clr">СБРОС</button></div><div id="list"></div>`;
+ const d=$('#drop'),inp=$('#inp');
+ const addH=async l=>{for(const file of l){const f={id:++uid,name:file.name,size:file.size};hf.push(f);try{f.buf=new Uint8Array(await file.arrayBuffer());await hashOne(f);f.buf=null}catch(e){f.err='не удалось прочитать файл'}hdraw()}};
+ d.onclick=()=>inp.click();inp.onchange=()=>{addH(inp.files);inp.value=''};
+ d.ondragover=e=>{e.preventDefault();d.classList.add('over')};d.ondragleave=()=>d.classList.remove('over');
+ d.ondrop=e=>{e.preventDefault();d.classList.remove('over');addH(e.dataTransfer.files)};
+ $('#exp').oninput=e=>{hc.exp=e.target.value;hdraw()};
+ $('#alg').onchange=async e=>{hc.alg=e.target.value;msg('пересчёт: выберите файлы заново для нового алгоритма');hf=[];hdraw()};
+ $('#clr').onclick=()=>{hf=[];hdraw()};hdraw()}
+function hdraw(){const l=$('#list');if(!l)return;const x=hc.exp.replace(/\s/g,'').toLowerCase();
+ $('#clr').disabled=!hf.length;
+ l.innerHTML=hf.map(f=>`<div class="file"><div class="fh"><span class="n">${esc(f.name)}</span><span class="tag">${fmt(f.size)}</span>${f.err?`<span class="tag">ERR: ${esc(f.err)}</span>`:`<span class="tag">${f.alg}</span>`+(x?(f.hash==x?'<span class="tag ok">✓ СОВПАДАЕТ</span>':'<span class="tag">✗ НЕ СОВПАДАЕТ</span>'):'')}${f.hash?`<button data-h="${f.id}">КОПИРОВАТЬ</button>`:''}<button data-x="${f.id}">✕</button></div>${f.hash?`<div class="fb hs">${f.hash}</div>`:''}</div>`).join('');
+ l.querySelectorAll('[data-h]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(hf.find(f=>f.id==b.dataset.h).hash);msg('хеш скопирован')}catch(e){msg('не удалось скопировать')}});
+ l.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{hf=hf.filter(f=>f.id!=b.dataset.x);hdraw()})}
+
+nav();show();
+</script>
+</body>
+</html>
